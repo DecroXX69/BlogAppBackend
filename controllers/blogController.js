@@ -66,22 +66,79 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
 // @desc    Create a blog
 // @route   POST /api/blogs
 // @access  Private
+// In your blogController.js
 const createBlog = asyncHandler(async (req, res) => {
-  const { title, content, excerpt, featuredImage, tags, published } = req.body;
-
-  const blog = new Blog({
-    title,
-    content,
-    excerpt,
-    featuredImage: featuredImage || '/images/default-blog.jpg',
-    author: req.user._id,
-    tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-    published: published || false,
-    slug: title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'),
+  try {
+    console.log("Request body:", req.body);
+    
+    // Check if user exists in request
+    if (!req.user || !req.user._id) {
+      console.error("User not found in request");
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+    
+    console.log("User in request:", req.user._id);
+    
+    const { title, content, excerpt, featuredImage, tags, published } = req.body;
+    
+    // Process tags to handle both string and array formats
+    let processedTags = [];
+    if (tags) {
+      processedTags = typeof tags === 'string' 
+        ? tags.split(',').map(tag => tag.trim()) 
+        : Array.isArray(tags) ? tags : [];
+    }
+    
+    // Validate required fields
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+    if (!content) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+    if (!excerpt) {
+      return res.status(400).json({ message: "Excerpt is required" });
+    }
+    
+    const blogData = {
+      title,
+      content,
+      excerpt,
+      featuredImage: featuredImage || '/images/default-blog.jpg',
+      author: req.user._id,
+      tags: processedTags,
+      published: published || false,
+      slug: title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'),
+    };
+    
+    console.log("Blog data to save:", blogData);
+    
+    const blog = new Blog(blogData);
+    const createdBlog = await blog.save();
+    
+    console.log("Blog created successfully:", createdBlog);
+    res.status(201).json(createdBlog);
+  } catch (error) {
+    console.error("Detailed error creating blog:", error);
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    if (error.errors) {
+      console.error("Validation errors:", error.errors);
+    }
+    // In your createBlog controller's catch block
+if (error.code === 11000) {
+  console.error("Duplicate key error:", error.keyValue);
+  return res.status(400).json({
+    message: "A blog with this title already exists. Please use a different title.",
+    field: Object.keys(error.keyValue)[0]
   });
-
-  const createdBlog = await blog.save();
-  res.status(201).json(createdBlog);
+}
+    res.status(500).json({ 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'production' ? null : error.stack,
+      errors: error.errors
+    });
+  }
 });
 
 const updateBlog = asyncHandler(async (req, res) => {
