@@ -1,10 +1,8 @@
-// backend/controllers/blogController.js
+
 const asyncHandler = require('express-async-handler');
 const Blog = require('../models/blogModel');
 
-// @desc    Get all blogs
-// @route   GET /api/blogs
-// @access  Public
+
 const getBlogs = asyncHandler(async (req, res) => {
   const pageSize = 10;
   const page = Number(req.query.pageNumber) || 1;
@@ -35,9 +33,7 @@ const getBlogs = asyncHandler(async (req, res) => {
   res.json({ blogs, page, pages: Math.ceil(count / pageSize), total: count });
 });
 
-// @desc    Get blog by ID
-// @route   GET /api/blogs/:id
-// @access  Public
+
 const getBlogById = asyncHandler(async (req, res) => {
   const blog = await Blog.findById(req.params.id).populate('author', 'name');
 
@@ -49,9 +45,7 @@ const getBlogById = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get blog by slug
-// @route   GET /api/blogs/slug/:slug
-// @access  Public
+
 const getBlogBySlug = asyncHandler(async (req, res) => {
   const blog = await Blog.findOne({ slug: req.params.slug }).populate('author', 'name');
 
@@ -63,15 +57,12 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Create a blog
-// @route   POST /api/blogs
-// @access  Private
-// In your blogController.js
+
 const createBlog = asyncHandler(async (req, res) => {
   try {
     console.log("Request body:", req.body);
     
-    // Check if user exists in request
+   
     if (!req.user || !req.user._id) {
       console.error("User not found in request");
       return res.status(401).json({ message: "User not authenticated" });
@@ -81,7 +72,7 @@ const createBlog = asyncHandler(async (req, res) => {
     
     const { title, content, excerpt, featuredImage, tags, published } = req.body;
     
-    // Process tags to handle both string and array formats
+   
     let processedTags = [];
     if (tags) {
       processedTags = typeof tags === 'string' 
@@ -89,7 +80,7 @@ const createBlog = asyncHandler(async (req, res) => {
         : Array.isArray(tags) ? tags : [];
     }
     
-    // Validate required fields
+
     if (!title) {
       return res.status(400).json({ message: "Title is required" });
     }
@@ -176,9 +167,7 @@ const updateBlog = asyncHandler(async (req, res) => {
     }
   });
   
-  // @desc    Delete a blog
-  // @route   DELETE /api/blogs/:id
-  // @access  Private
+
   const deleteBlog = asyncHandler(async (req, res) => {
     const blog = await Blog.findById(req.params.id);
   
@@ -197,9 +186,7 @@ const updateBlog = asyncHandler(async (req, res) => {
     }
   });
   
-  // @desc    Get user blogs
-  // @route   GET /api/blogs/user
-  // @access  Private
+
   const getUserBlogs = asyncHandler(async (req, res) => {
     const blogs = await Blog.find({ author: req.user._id }).sort({ createdAt: -1 });
     res.json(blogs);

@@ -9,28 +9,27 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const path = require('path');
 
-// Load environment variables
+
 dotenv.config();
 
-// Connect to database
+
 connectDB();
 
 const app = express();
 
-// Middleware
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Routes
 app.use('/api/blogs', blogRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
-// Error handling middleware
+
 app.use(errorHandler);
 
-// In your server.js or app.js
+
 app.use((err, req, res, next) => {
     console.error('Global error handler caught:', err);
     res.status(500).json({

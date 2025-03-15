@@ -1,22 +1,22 @@
-// backend/middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModel');
 
-// Add this to your authMiddleware.js
+
 const protect = asyncHandler(async (req, res, next) => {
   let token;
   
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      console.log("Token received:", token.substring(0, 10) + "..."); // Log partial token for debugging
+      console.log("Token received:", token.substring(0, 10) + "..."); 
       
-      // Verify token
+     
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log("Decoded user ID:", decoded.id);
       
-      // Get user from token
+      
       req.user = await User.findById(decoded.id).select('-password');
       console.log("User found:", req.user ? req.user._id : "No user found");
       

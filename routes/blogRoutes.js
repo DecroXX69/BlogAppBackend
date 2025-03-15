@@ -17,7 +17,7 @@ router.route('/').get(getBlogs).post(protect, createBlog);
 router.route('/user').get(protect, getUserBlogs);
 router.route('/slug/:slug').get(getBlogBySlug);
 router.route('/:id').get(getBlogById).put(protect, updateBlog).delete(protect, deleteBlog);
-// Add this to your routes file
+
 router.post('/test-connection', protect, (req, res) => {
   try {
     res.status(200).json({ 

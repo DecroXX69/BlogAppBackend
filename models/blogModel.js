@@ -1,4 +1,4 @@
-// backend/models/blogModel.js
+
 const mongoose = require('mongoose');
 
 const blogSchema = mongoose.Schema(
@@ -43,8 +43,7 @@ const blogSchema = mongoose.Schema(
   }
 );
 
-// Create slug from title before saving
-// Ensure the pre-save hook safely handles title
+
 blogSchema.pre('save', function(next) {
   if (this.isModified('title') && this.title) {
     this.slug = this.title

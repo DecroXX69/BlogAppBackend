@@ -1,10 +1,8 @@
- // backend/controllers/userController.js
+ 
  const asyncHandler = require('express-async-handler');
  const User = require('../models/userModel');
  
- // @desc    Get user profile
- // @route   GET /api/users/profile
- // @access  Private
+ 
  const getUserProfile = asyncHandler(async (req, res) => {
    const user = await User.findById(req.user._id);
  
@@ -21,9 +19,7 @@
    }
  });
  
- // @desc    Update user profile
- // @route   PUT /api/users/profile
- // @access  Private
+
  const updateUserProfile = asyncHandler(async (req, res) => {
    const user = await User.findById(req.user._id);
  
