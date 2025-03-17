@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const blogSchema = mongoose.Schema(
@@ -30,12 +29,25 @@ const blogSchema = mongoose.Schema(
       ref: 'User',
     },
     tags: [String],
+    category: {
+      type: String,
+      default: 'Uncategorized',
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
     published: {
       type: Boolean,
       default: false,
     },
     publishedAt: {
       type: Date,
+    },
+    shareableLink: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   {
@@ -54,6 +66,11 @@ blogSchema.pre('save', function(next) {
   
   if (this.isModified('published') && this.published && !this.publishedAt) {
     this.publishedAt = Date.now();
+  }
+  
+  // Generate a unique shareable link if it doesn't exist and the blog is published
+  if (this.published && !this.shareableLink) {
+    this.shareableLink = `${this.slug}-${Date.now().toString(36)}`;
   }
   
   next();

@@ -1,4 +1,3 @@
-
 const asyncHandler = require('express-async-handler');
 const Blog = require('../models/blogModel');
 
@@ -23,8 +22,12 @@ const getBlogs = asyncHandler(async (req, res) => {
     ? { published: false }
     : {};
 
-  const count = await Blog.countDocuments({ ...keyword, ...filterPublished });
-  const blogs = await Blog.find({ ...keyword, ...filterPublished })
+  const filterCategory = req.query.category
+    ? { category: req.query.category }
+    : {};
+
+  const count = await Blog.countDocuments({ ...keyword, ...filterPublished, ...filterCategory });
+  const blogs = await Blog.find({ ...keyword, ...filterPublished, ...filterCategory })
     .populate('author', 'name')
     .limit(pageSize)
     .skip(pageSize * (page - 1))
@@ -38,6 +41,9 @@ const getBlogById = asyncHandler(async (req, res) => {
   const blog = await Blog.findById(req.params.id).populate('author', 'name');
 
   if (blog) {
+    // Increment view count
+    blog.viewCount += 1;
+    await blog.save();
     res.json(blog);
   } else {
     res.status(404);
@@ -50,6 +56,24 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
   const blog = await Blog.findOne({ slug: req.params.slug }).populate('author', 'name');
 
   if (blog) {
+    // Increment view count
+    blog.viewCount += 1;
+    await blog.save();
+    res.json(blog);
+  } else {
+    res.status(404);
+    throw new Error('Blog not found');
+  }
+});
+
+
+const getBlogByShareableLink = asyncHandler(async (req, res) => {
+  const blog = await Blog.findOne({ shareableLink: req.params.shareableLink }).populate('author', 'name');
+
+  if (blog) {
+    // Increment view count
+    blog.viewCount += 1;
+    await blog.save();
     res.json(blog);
   } else {
     res.status(404);
@@ -62,7 +86,6 @@ const createBlog = asyncHandler(async (req, res) => {
   try {
     console.log("Request body:", req.body);
     
-   
     if (!req.user || !req.user._id) {
       console.error("User not found in request");
       return res.status(401).json({ message: "User not authenticated" });
@@ -70,9 +93,8 @@ const createBlog = asyncHandler(async (req, res) => {
     
     console.log("User in request:", req.user._id);
     
-    const { title, content, excerpt, featuredImage, tags, published } = req.body;
+    const { title, content, excerpt, featuredImage, tags, category, published } = req.body;
     
-   
     let processedTags = [];
     if (tags) {
       processedTags = typeof tags === 'string' 
@@ -98,6 +120,7 @@ const createBlog = asyncHandler(async (req, res) => {
       featuredImage: featuredImage || '/images/default-blog.jpg',
       author: req.user._id,
       tags: processedTags,
+      category: category || 'Uncategorized',
       published: published || false,
       slug: title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'),
     };
@@ -116,14 +139,14 @@ const createBlog = asyncHandler(async (req, res) => {
     if (error.errors) {
       console.error("Validation errors:", error.errors);
     }
-    // In your createBlog controller's catch block
-if (error.code === 11000) {
-  console.error("Duplicate key error:", error.keyValue);
-  return res.status(400).json({
-    message: "A blog with this title already exists. Please use a different title.",
-    field: Object.keys(error.keyValue)[0]
-  });
-}
+    
+    if (error.code === 11000) {
+      console.error("Duplicate key error:", error.keyValue);
+      return res.status(400).json({
+        message: "A blog with this title already exists. Please use a different title.",
+        field: Object.keys(error.keyValue)[0]
+      });
+    }
     res.status(500).json({ 
       message: error.message,
       stack: process.env.NODE_ENV === 'production' ? null : error.stack,
@@ -133,7 +156,7 @@ if (error.code === 11000) {
 });
 
 const updateBlog = asyncHandler(async (req, res) => {
-    const { title, content, excerpt, featuredImage, tags, published } = req.body;
+    const { title, content, excerpt, featuredImage, tags, category, published } = req.body;
   
     const blog = await Blog.findById(req.params.id);
   
@@ -148,12 +171,12 @@ const updateBlog = asyncHandler(async (req, res) => {
       blog.content = content || blog.content;
       blog.excerpt = excerpt || blog.excerpt;
       blog.featuredImage = featuredImage || blog.featuredImage;
-      blog.tags = tags ? tags.split(',').map(tag => tag.trim()) : blog.tags;
+      blog.tags = tags ? (typeof tags === 'string' ? tags.split(',').map(tag => tag.trim()) : tags) : blog.tags;
+      blog.category = category || blog.category;
       
-      // Only update published status if explicitly provided
       if (published !== undefined) {
         blog.published = published;
-        // Set publishedAt if publishing for the first time
+       
         if (published && !blog.publishedAt) {
           blog.publishedAt = Date.now();
         }
@@ -168,38 +191,43 @@ const updateBlog = asyncHandler(async (req, res) => {
   });
   
 
-  const deleteBlog = asyncHandler(async (req, res) => {
-    const blog = await Blog.findById(req.params.id);
-  
-    if (blog) {
-      // Check if user is author or admin
-      if (blog.author.toString() !== req.user._id.toString() && !req.user.isAdmin) {
-        res.status(401);
-        throw new Error('Not authorized to delete this blog');
-      }
-  
-      await blog.deleteOne();
-      res.json({ message: 'Blog removed' });
-    } else {
-      res.status(404);
-      throw new Error('Blog not found');
-    }
-  });
-  
+const deleteBlog = asyncHandler(async (req, res) => {
+  const blog = await Blog.findById(req.params.id);
 
-  const getUserBlogs = asyncHandler(async (req, res) => {
-    const blogs = await Blog.find({ author: req.user._id }).sort({ createdAt: -1 });
-    res.json(blogs);
-  });
-  
-  module.exports = {
-    getBlogs,
-    getBlogById,
-    getBlogBySlug,
-    createBlog,
-    updateBlog,
-    deleteBlog,
-    getUserBlogs,
-  };
-  
- 
+  if (blog) {
+    // Check if user is author or admin
+    if (blog.author.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+      res.status(401);
+      throw new Error('Not authorized to delete this blog');
+    }
+
+    await blog.deleteOne();
+    res.json({ message: 'Blog removed' });
+  } else {
+    res.status(404);
+    throw new Error('Blog not found');
+  }
+});
+
+
+const getUserBlogs = asyncHandler(async (req, res) => {
+  const blogs = await Blog.find({ author: req.user._id }).sort({ createdAt: -1 });
+  res.json(blogs);
+});
+
+const getCategories = asyncHandler(async (req, res) => {
+  const categories = await Blog.distinct('category');
+  res.json(categories);
+});
+
+module.exports = {
+  getBlogs,
+  getBlogById,
+  getBlogBySlug,
+  getBlogByShareableLink,
+  createBlog,
+  updateBlog,
+  deleteBlog,
+  getUserBlogs,
+  getCategories,
+};

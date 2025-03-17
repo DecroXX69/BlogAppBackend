@@ -4,10 +4,12 @@ const {
   getBlogs,
   getBlogById,
   getBlogBySlug,
+  getBlogByShareableLink,
   createBlog,
   updateBlog,
   deleteBlog,
   getUserBlogs,
+  getCategories,
 } = require('../controllers/blogController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,7 +17,9 @@ const router = express.Router();
 
 router.route('/').get(getBlogs).post(protect, createBlog);
 router.route('/user').get(protect, getUserBlogs);
+router.route('/categories').get(getCategories);
 router.route('/slug/:slug').get(getBlogBySlug);
+router.route('/share/:shareableLink').get(getBlogByShareableLink);
 router.route('/:id').get(getBlogById).put(protect, updateBlog).delete(protect, deleteBlog);
 
 router.post('/test-connection', protect, (req, res) => {
