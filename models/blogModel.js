@@ -1,3 +1,5 @@
+// models/blogModel.js - Updated version with site field
+
 const mongoose = require('mongoose');
 
 const blogSchema = mongoose.Schema(
@@ -49,13 +51,27 @@ const blogSchema = mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    // New fields for site integration
+    siteId: {
+      type: String,
+      index: true, // Add index for better query performance
+    },
+    // Optional array to support displaying on multiple sites
+    sites: [{
+      type: String
+    }],
+    // For controlling visibility across different sites
+    isGlobal: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
   }
 );
 
-
+// Keep your existing pre-save hooks
 blogSchema.pre('save', function(next) {
   if (this.isModified('title') && this.title) {
     this.slug = this.title
